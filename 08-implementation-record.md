@@ -107,3 +107,10 @@
 - 실제 Three.js 3D: 구현 완료(§12, three 0.186.0 lazy 청크).
 - WebP: 12종 전환 완료(§11). 최대 99.7KB.
 - 남은 승인 대기: 배포 후 공개 URL 자산경로·HVC 확인. `dist-web/` 상대경로 준비됨.
+
+## 14. GitHub 배포 (2026-09-19)
+
+- 저장소: https://github.com/WBmaker2/genetic-recombination-lab (Public, main 2커밋).
+- Pages: Actions 워크플로(`.github/workflows/pages.yml`, npm ci→test→build→artifact→deploy) 성공.
+- 공개 URL: https://wbmaker2.github.io/genetic-recombination-lab/ — 페이지· organims webp(99708B)·JS 200 확인, 실브라우저 갤러리 4종 1200px 로드 확인.
+- HVC 등록·갤러리 동기화는 별도 범위(공통원칙 §6.7).
