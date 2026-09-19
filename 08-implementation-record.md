@@ -114,3 +114,9 @@
 - Pages: Actions 워크플로(`.github/workflows/pages.yml`, npm ci→test→build→artifact→deploy) 성공.
 - 공개 URL: https://wbmaker2.github.io/genetic-recombination-lab/ — 페이지· organims webp(99708B)·JS 200 확인, 실브라우저 갤러리 4종 1200px 로드 확인.
 - HVC 등록·갤러리 동기화는 별도 범위(공통원칙 §6.7).
+
+## 15. vivehong 아카이브 등록 (2026-09-19, 공개 반영 대기)
+
+- 중복 검사: 제목·URL·저장소 3쿼리 무일치. 태그 6종(과학·관찰·수업·수학·시뮬레이션·탐구) 기존 택소노미 확인 후 `#X 추가` 버튼으로만 등록.
+- 결과: 라이브러리 134→135개 앱, 카드 "공개 반영 대기", 대기 0→1, 스냅샷 시각 변경 없음.
+- 동기화 미실행(별도 승인 필요). 썸네일 auto 유지.
