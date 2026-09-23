@@ -18,20 +18,34 @@ function el<T extends HTMLElement>(id: string): T {
   const STEPS: StepName[] = ["setup", "meiosis", "sampling", "inference", "review", "p1"];
 
 export function showStep(name: StepName): void {
-  state.step = name;
+  let target = name;
+  const accessNotice = el("reviewAccessNotice");
+  if (name === "review" && (state.selectedRun === null || state.inferenceRunIndex !== state.selectedRun)) {
+    target = "inference";
+    accessNotice.textContent = "기록을 열기 전에 실행을 선택하고 재조합률 계산을 제출해 주세요.";
+    accessNotice.hidden = false;
+    el("diffBox").textContent = "계산 제출 후 비교 내용을 확인할 수 있습니다.";
+  } else {
+    accessNotice.hidden = true;
+  }
+  state.step = target;
   for (const s of STEPS) {
-    el(`step-${s}`).hidden = s !== name;
+    el(`step-${s}`).hidden = s !== target;
   }
   document.querySelectorAll(".stepper button").forEach((b) => {
-    const on = (b as HTMLButtonElement).dataset.step === name;
+    const on = (b as HTMLButtonElement).dataset.step === target;
     b.setAttribute("aria-current", on ? "step" : "false");
   });
-  if (location.hash !== `#${name}`) history.replaceState(null, "", `#${name}`);
-  el<HTMLHeadingElement>(`h-${name}`).focus({ preventScroll: false });
+  el("stepProgress").textContent = `${STEPS.indexOf(target) + 1}/${STEPS.length} 단계`;
+  el<HTMLButtonElement>("startFlowBtn").hidden = target !== "setup";
+  document.querySelector<HTMLButtonElement>(`.stepper button[data-step="${target}"]`)?.scrollIntoView({ block: "nearest", inline: "center" });
+  if (location.hash !== `#${target}`) history.replaceState(null, "", `#${target}`);
+  el<HTMLHeadingElement>(`h-${target}`).focus({ preventScroll: false });
 }
 
 function syncSeedBadge(): void {
-  el("seedBadge").textContent = `seed ${state.seed} · r=${state.trueR} · N=${state.N} · ${state.phase}`;
+  el("seedBadge").textContent = "조건 ▾";
+  el("seedDetail").textContent = `seed ${state.seed} · 설정 r=${state.trueR.toFixed(2)} · N=${state.N} · ${state.phase}`;
 }
 
 function initSetup(): void {
@@ -56,6 +70,11 @@ function initSetup(): void {
     r.addEventListener("change", () => {
       const checked = document.querySelector('input[name="phase"]:checked') as HTMLInputElement;
       state.phase = checked.value as typeof state.phase;
+      state.parentalGuess = [];
+      predBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      el<HTMLButtonElement>("toMeiosisBtn").disabled = true;
+      predResult.textContent = "";
+      el("predictionTitle").textContent = `예측 — ${state.phase} 부모에서 어떤 배우자가 나올까?`;
       syncSeedBadge();
     });
   });
@@ -89,9 +108,14 @@ function initSetup(): void {
         x.setAttribute("aria-pressed", String(state.parentalGuess.includes((x as HTMLButtonElement).dataset.hap as Haplotype)));
       });
       if (state.parentalGuess.length === 2) {
+        el<HTMLButtonElement>("toMeiosisBtn").disabled = false;
         const ok = gradeParentalSelection(state.phase, state.parentalGuess);
-        predResult.textContent = ok ? "정확: 부모형 식별 성공." : "다름: 분열·반복 단계에서 다시 확인.";
+        const parents = state.phase === "AB/ab" ? "AB와 ab" : "Ab와 aB";
+        predResult.textContent = ok
+          ? `정확: ${state.parentalGuess.join("·")}는 ${state.phase} 부모형입니다. 교차가 없을 때 그대로 전달됩니다.`
+          : `다시 생각해 보세요. ${state.phase} 부모형은 ${parents}이며, 교차가 없을 때 그대로 전달됩니다.`;
       } else {
+        el<HTMLButtonElement>("toMeiosisBtn").disabled = true;
         predResult.textContent = `선택 ${state.parentalGuess.length}/2`;
       }
     });
@@ -104,6 +128,10 @@ function initSetup(): void {
     .join("");
 
   el("toMeiosisBtn").addEventListener("click", () => showStep("meiosis"));
+  el("startFlowBtn").addEventListener("click", () => {
+    document.querySelector<HTMLInputElement>('input[name="phase"]:checked')?.focus();
+    el("step-setup").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function initMeiosis(): void {

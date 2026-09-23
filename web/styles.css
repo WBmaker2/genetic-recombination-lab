@@ -25,12 +25,16 @@ body {
 :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .topbar { position: sticky; top: 0; z-index: 10; background: var(--color-card); border-bottom: 1px solid var(--color-border); }
 .topbar-inner { display: flex; align-items: center; gap: var(--space-md); padding: 8px var(--space-md); }
+.seed-details { margin-left: auto; color: var(--color-muted-fg); font-size: 12px; position: relative; }
+.seed-details summary { cursor: pointer; white-space: nowrap; }
+.seed-details span { position: absolute; z-index: 20; right: 0; top: 28px; width: max-content; max-width: min(90vw, 420px); padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
 .topbar h1 { font-size: 20px; margin: 0; }
-.seed-badge { margin-left: auto; font-size: 13px; color: var(--color-muted-fg); }
 .stepper { display: flex; gap: 4px; padding: 0 var(--space-md) 8px; overflow-x: auto; }
+.step-progress { display: none; align-self: center; color: var(--color-muted-fg); font-size: 13px; white-space: nowrap; }
 .stepper button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); background: #fff; border-radius: 8px; cursor: pointer; white-space: nowrap; }
 .stepper button[aria-current="step"] { background: var(--color-primary); color: #fff; font-weight: 700; }
 .layout { max-width: 1120px; margin: 0 auto; padding: var(--space-md); }
+.start-flow { margin: 0 0 var(--space-md); }
 .lede { font-size: 20px; font-weight: 700; }
 .split { display: grid; gap: var(--space-md); grid-template-columns: 1fr; }
 @media (min-width: 1024px) { .split { grid-template-columns: 1fr 1fr; } }
@@ -54,6 +58,7 @@ th, td { border: 1px solid var(--color-border); padding: 10px; text-align: cente
 th button { min-height: 44px; border: none; background: none; font-weight: 700; font-size: 16px; text-decoration: underline; }
 .runs { list-style: none; padding: 0; display: grid; gap: 8px; }
 .runs li { border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 12px; background: #fff; }
+.table-scroll { overflow-x: auto; }
 .org-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 @media (min-width: 768px) { .org-grid { grid-template-columns: repeat(4, 1fr); } }
 .org-grid figure { margin: 0; text-align: center; font-size: 12px; min-width: 0; }
@@ -64,7 +69,18 @@ th button { min-height: 44px; border: none; background: none; font-weight: 700; 
 dialog { border-radius: 16px; padding: 24px; max-width: 480px; width: 90%; }
 @keyframes gi-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(5,150,105,.55); } 50% { box-shadow: 0 0 0 10px rgba(5,150,105,0); } }
 .gi-pulse { animation: gi-pulse 2s infinite; }
+.gi-pulse:disabled { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .gi-pulse { animation: none; border: 2px solid var(--color-primary); }
   * { transition: none !important; }
+}
+@media (max-width: 600px) {
+  .topbar-inner { gap: 8px; padding-inline: 10px; }
+  .topbar h1 { font-size: 16px; }
+  .seed-details { font-size: 11px; }
+  .ghost-btn { min-height: 40px; padding: 6px 8px; font-size: 14px; white-space: nowrap; }
+  .stepper button { padding: 6px 9px; font-size: 14px; }
+  .step-progress { display: inline-block; }
+  .card { padding: 16px; }
+  .start-flow { display: block; width: 100%; }
 }

@@ -2,6 +2,7 @@
 import type { Haplotype, Phase } from "../engine/haplotypes";
 import type { MeiosisMode } from "../views/meiosis";
 import type { SampleResult } from "../engine/sampler";
+import { loadSessionRuns } from "./storage";
 
 export type StepName = "setup" | "meiosis" | "sampling" | "inference" | "review" | "p1";
 
@@ -14,8 +15,9 @@ export const state = {
   parentalGuess: [] as Haplotype[],
   demoMode: "no-crossover" as MeiosisMode,
   demoStep: 0 as number,
-  runs: [] as SampleResult[],
+  runs: loadSessionRuns() as SampleResult[],
   runSeq: 0 as number,
   selectedRun: null as number | null,
+  inferenceRunIndex: null as number | null,
   tableSortDesc: true as boolean,
 };

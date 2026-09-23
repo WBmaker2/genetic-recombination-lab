@@ -12,10 +12,11 @@
   <header class="topbar">
     <div class="topbar-inner">
       <h1>유전 재조합 설계실</h1>
-      <p class="seed-badge" id="seedBadge">seed —</p>
+      <details class="seed-details"><summary id="seedBadge">실험 조건</summary><span id="seedDetail"></span></details>
       <button type="button" id="historyBtn" class="ghost-btn">업데이트 내역</button>
     </div>
     <nav class="stepper" aria-label="학습 단계">
+      <span id="stepProgress" class="step-progress">1/6</span>
       <button type="button" data-step="setup" aria-current="step">1 염색체</button>
       <button type="button" data-step="meiosis" aria-current="false">2 분열</button>
       <button type="button" data-step="sampling" aria-current="false">3 반복</button>
@@ -27,6 +28,8 @@
 
   <main id="main" class="layout">
     <p class="lede" id="lede">같은 부모에게서 왜 서로 다른 조합이 나올까?</p>
+    <p id="reviewAccessNotice" class="help" role="status" hidden></p>
+    <button type="button" id="startFlowBtn" class="secondary start-flow">연결상 조건으로 이동</button>
 
     <section id="step-setup" aria-labelledby="h-setup">
       <h2 id="h-setup" tabindex="-1">1 · 염색체 — 연결상과 조건 정하기</h2>
@@ -42,7 +45,7 @@
             <label for="rNumber">재조합률 r (0〜0.5)</label>
             <input id="rRange" type="range" min="0" max="0.5" step="0.01" value="0.1" aria-label="재조합률 슬라이더" />
             <input id="rNumber" type="number" min="0" max="0.5" step="0.01" value="0.1" inputmode="decimal" aria-describedby="rHelp" />
-            <p class="help" id="rHelp">위치 슬라이더는 개념적 상대 위치이며 r로 자동 변환하지 않음.</p>
+            <p class="help" id="rHelp">설정값 r은 표본에서 나올 재조합형의 비율을 정합니다. 0〜0.5로 조정할 수 있습니다.</p>
             <p class="error" id="rError" role="alert" hidden></p>
           </div>
           <div class="field-row">
@@ -60,7 +63,7 @@
           </div>
         </div>
         <div class="card">
-          <h3>예측 — AB/ab 부모에서 어떤 배우자가 나올까?</h3>
+          <h3 id="predictionTitle">예측 — AB/ab 부모에서 어떤 배우자가 나올까?</h3>
           <p class="help">부모형 2종을 고르세요. (긴 글 입력 없음)</p>
           <div class="btn-row" id="predButtons" role="group" aria-label="부모형 예측">
             <button type="button" data-hap="AB" aria-pressed="false">AB</button>
@@ -69,9 +72,10 @@
             <button type="button" data-hap="aB" aria-pressed="false">aB</button>
           </div>
           <p id="predResult" aria-live="polite"></p>
+          <p class="help" id="predictionGateHelp">부모형 두 종류를 골라 예측을 완료하면 다음 단계로 이동할 수 있습니다.</p>
           <h3>가상 정원 생물 4 표현형</h3>
           <div class="org-grid" id="orgGallery"></div>
-          <button type="button" id="toMeiosisBtn" class="primary gi-pulse">분열 단계로 이동</button>
+          <button type="button" id="toMeiosisBtn" class="primary gi-pulse" disabled>예측을 마치고 분열 단계로 이동</button>
         </div>
       </div>
     </section>
@@ -103,6 +107,7 @@
 
     <section id="step-sampling" aria-labelledby="h-sampling" hidden>
       <h2 id="h-sampling" tabindex="-1">3 · 반복 — 표본 생성과 분포</h2>
+      <p class="help">이 탭을 새로고침하면 생성한 표본은 복구됩니다. 학습자 설명은 자동 저장하지 않습니다.</p>
       <div class="btn-row">
         <button type="button" id="genBtn" class="primary gi-pulse">표본 생성</button>
         <button type="button" id="cancelBtn" disabled>정지</button>
@@ -115,6 +120,7 @@
       </div>
       <h3>실행 기록 (연결상 변경해도 보존)</h3>
       <ul id="runList" class="runs"></ul>
+      <div class="card" id="comparisonBox"><h3>표본 크기 비교</h3><p>표본을 두 번 이상 생성하면 AB, ab, Ab, aB 순서로 개수와 비율을 비교합니다.</p></div>
     </section>
 
     <section id="step-inference" aria-labelledby="h-inference" hidden>
@@ -133,6 +139,7 @@
         </div>
         <p class="error" id="inferError" role="alert" hidden></p>
         <button type="button" id="calcBtn" class="primary gi-pulse">r 계산·비교</button>
+        <p class="help">계산 전에는 정답인 표본 r̂와 설정 r을 숨깁니다. 제출 후 두 값을 비교합니다.</p>
         <div id="inferResult" aria-live="polite"></div>
       </div>
     </section>
@@ -170,6 +177,7 @@
     </section>
     <section id="step-p1" aria-labelledby="h-p1" hidden>
       <h2 id="h-p1" tabindex="-1">6 · 심화 — 세 유전자 지도와 이중 교차 (P1)</h2>
+      <p class="help">SCO(단일 교차)는 한 구간에서 한 번 교차한 경우이며, SCO1은 A–B 구간, SCO2는 B–C 구간입니다. DCO(이중 교차)는 두 구간 모두에서 교차한 경우입니다. Wilson 95% 구간은 표본 비율의 불확실성 범위입니다. Haldane 함수는 간섭이 없다고 가정해 재조합률을 지도거리로 바꿉니다.</p>
       <div class="split">
         <div class="card">
           <p class="help" id="p1Preset"></p>
@@ -190,6 +198,7 @@
     <ul>
       <li>2026-09-19 — 최초 개발: M1 확률·표본 엔진.</li>
       <li>2026-09-19 — M2 기록 스키마·P0 프리셋, M3 앱셸·SVG 분열·자손표.</li>
+      <li>2026-09-23 — 모바일 시작 흐름, 연결상 예측, r/r̂ 안내, 추정 공개 시점, 표본 비교·복구를 개선.</li>
     </ul>
     <button type="button" id="historyClose">닫기</button>
   </dialog>

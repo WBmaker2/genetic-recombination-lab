@@ -5,8 +5,8 @@ import { HAPLOTYPES, isRecombinant, type Haplotype } from "../engine/haplotypes"
 import { estimateRecombination, mulberry32, zeroCounts, type SampleResult } from "../engine/sampler";
 import { gradeParentalSelection, gradeRatio } from "../scenarios/p0";
 import { createRecord, parseRecord } from "../models/record";
-import { barChartSvg, distributionRows, offspringTableHtml, summarySentence } from "../views/offspring";
-import { appendRecord, downloadJson, listRecords } from "./storage";
+import { barChartSvg, distributionRows, offspringTableHtml } from "../views/offspring";
+import { appendRecord, downloadJson, listRecords, saveSessionRuns } from "./storage";
 
 function el<T extends HTMLElement>(id: string): T {
   const n = document.getElementById(id);
@@ -65,14 +65,15 @@ function renderLatest(): void {
     tableBox.innerHTML = "";
     renderRunList();
     renderRunSelect();
+    renderComparison();
     return;
   }
-  let rows = distributionRows(run.countsByHaplotype, run.phase, run.N);
-  if (state.tableSortDesc) rows = [...rows].sort((a, b) => b.count - a.count);
-  summary.textContent = `실행 #${state.runs.length} (seed ${run.seed}, 참 r=${run.trueR}, ${run.phase}): ` +
-    summarySentence(distributionRows(run.countsByHaplotype, run.phase, run.N), run.N, run.observedR);
-  chartBox.innerHTML = run.N === 0 ? "<p>표본이 없어 차트 없음.</p>" : barChartSvg(rows, run.N);
-  tableBox.innerHTML = offspringTableHtml(rows, run.N);
+  const fixedRows = distributionRows(run.countsByHaplotype, run.phase, run.N);
+  const tableRows = state.tableSortDesc ? [...fixedRows].sort((a, b) => b.count - a.count) : fixedRows;
+  summary.textContent = `실행 #${state.runs.length} (N=${run.N}, ${run.phase}): ` +
+    (run.N === 0 ? "표본이 없어 추정할 수 없음." : `총 ${run.N}개. ` + fixedRows.map((r) => `${r.haplotype} ${r.count}개`).join(", ") + ". 설정값과 표본 추정값은 추정 단계에서 계산을 제출한 뒤 비교합니다.");
+  chartBox.innerHTML = run.N === 0 ? "<p>표본이 없어 차트 없음.</p>" : barChartSvg(fixedRows, run.N);
+  tableBox.innerHTML = offspringTableHtml(tableRows, run.N);
   const sortBtn = tableBox.querySelector('[data-sort]') as HTMLButtonElement | null;
   sortBtn?.addEventListener("click", () => {
     state.tableSortDesc = !state.tableSortDesc;
@@ -81,12 +82,20 @@ function renderLatest(): void {
   });
   renderRunList();
   renderRunSelect();
+  renderComparison();
+}
+
+function renderComparison(): void {
+  const box = el("comparisonBox");
+  const headers = state.runs.map((r, i) => `<th scope="col">실행 #${i + 1}<br>${r.phase}<br>설정 r=${r.trueR.toFixed(2)}<br>N=${r.N}<br>seed=${r.seed}</th>`).join("");
+  const rows = HAPLOTYPES.map((h) => `<tr><th scope="row">${h}</th>${state.runs.map((r) => `<td>${r.countsByHaplotype[h]}개 (${r.N ? (r.countsByHaplotype[h] / r.N).toFixed(3) : "—"})</td>`).join("")}</tr>`).join("");
+  box.innerHTML = `<h3>표본 크기 비교</h3><p>표본 크기만 비교하려면 연결상과 설정 r을 같게 맞추세요. 실행별 개수와 비율이며 범주 순서는 AB, ab, Ab, aB로 고정됩니다.</p>${state.runs.length < 2 ? "<p>표본을 두 번 이상 생성하면 나란히 비교할 수 있습니다.</p>" : `<div class="table-scroll"><table><caption>실행별 하플로타입 개수와 비율</caption><thead><tr><th scope="col">하플로타입</th>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`}`;
 }
 
 function renderRunList(): void {
   const ul = el("runList");
   ul.innerHTML = state.runs
-    .map((r, i) => `<li>실행 #${i + 1} · ${r.phase} · N=${r.N} · seed=${r.seed} · 참 r=${r.trueR} · r_hat=${r.observedR === null ? "추정 불가" : r.observedR.toFixed(3)}</li>`)
+    .map((r, i) => `<li>실행 #${i + 1} · ${r.phase} · N=${r.N} · seed=${r.seed}</li>`)
     .join("");
 }
 
@@ -98,16 +107,21 @@ function renderRunSelect(): void {
   box.querySelectorAll('input[name="runSel"]').forEach((radio) => {
     radio.addEventListener("change", () => {
       state.selectedRun = Number((radio as HTMLInputElement).value);
+      state.inferenceRunIndex = null;
+      el("inferResult").textContent = "";
+      el("inferError").textContent = "";
+      el("inferError").hidden = true;
+      el("diffBox").textContent = "새 실행의 계산을 제출한 뒤 비교 내용을 확인할 수 있습니다.";
       const run = state.runs[state.selectedRun];
       if (run) {
-        el<HTMLInputElement>("numInput").value = String(run.recombinantCount);
+        el<HTMLInputElement>("numInput").value = "";
         el<HTMLInputElement>("denInput").value = String(run.N);
       }
     });
   });
   const selected = state.selectedRun !== null ? state.runs[state.selectedRun] : undefined;
   if (selected) {
-    el<HTMLInputElement>("numInput").value = String(selected.recombinantCount);
+    el<HTMLInputElement>("numInput").value = "";
     el<HTMLInputElement>("denInput").value = String(selected.N);
   }
 }
@@ -129,9 +143,16 @@ function initSampling(): void {
       }, aborter.signal);
       if (myToken !== runToken) return; // 오래된 작업 무시
       state.runs.push(run);
+      state.inferenceRunIndex = null;
+      el("inferResult").textContent = "";
+      el("inferError").textContent = "";
+      el("inferError").hidden = true;
+      el("diffBox").textContent = "새 실행의 계산을 제출한 뒤 비교 내용을 확인할 수 있습니다.";
+      const restored = saveSessionRuns(state.runs);
       state.runSeq += 1;
       state.selectedRun = state.runs.length - 1;
       renderLatest();
+      if (!restored) el("sampleSummary").textContent += " 이 브라우저는 탭 임시 저장을 사용할 수 없어 새로고침 뒤 표본 복구가 되지 않을 수 있습니다.";
     } catch (e) {
       if ((e as DOMException).name !== "AbortError") throw e;
       el("sampleSummary").textContent = "생성이 정지됨. 다시 시도 가능.";
@@ -150,6 +171,9 @@ function initInference(): void {
     const err = el("inferError");
     const out = el("inferResult");
     const run = state.selectedRun !== null ? state.runs[state.selectedRun] : undefined;
+    state.inferenceRunIndex = null;
+    out.textContent = "";
+    el("diffBox").textContent = "계산 제출 후 비교 내용을 확인할 수 있습니다.";
     if (!run) {
       err.hidden = false;
       err.textContent = "실행을 먼저 선택하세요.";
@@ -167,6 +191,11 @@ function initInference(): void {
       err.textContent = "N=0에서는 추정하지 않음.";
       return;
     }
+    if (den !== run.N) {
+      err.hidden = false;
+      err.textContent = `선택한 표본의 전체 수 N=${run.N}을 분모로 입력하세요.`;
+      return;
+    }
     if (num > den) {
       err.hidden = false;
       err.textContent = "재조합 수가 전체를 넘을 수 없음.";
@@ -178,16 +207,23 @@ function initInference(): void {
     const ok = expected !== null && gradeRatio(userR, expected, 1e-9);
     const over = userR > 0.5 ? " 표본 변동 가능 — 원자료 유지, 참 모수 범위와 구분." : "";
     out.textContent =
-      `r_hat=${userR.toFixed(3)} (재조합 ${num}/${den}). ` +
-      `선택 실행의 r_hat=${expected === null ? "추정 불가" : expected.toFixed(3)}, 참 r=${run.trueR}. ` +
+      `제출한 r̂=${userR.toFixed(3)} (재조합 ${num}/${den}). ` +
+      `표본에서 계산한 r̂=${expected === null ? "추정 불가" : expected.toFixed(3)}, 시뮬레이션 설정값 r=${run.trueR}. ` +
       (ok ? "계산 정확." : "계산이 실행값과 다름 — 분자·분모를 확인.") + over;
+    state.inferenceRunIndex = state.selectedRun;
+    el("reviewAccessNotice").hidden = true;
   });
 }
 
 function initReview(): void {
   const diffBox = el("diffBox");
   const renderDiff = () => {
-    const run = state.runs[state.runs.length - 1];
+    const index = state.selectedRun;
+    const run = index === null ? undefined : state.runs[index];
+    if (!run || state.inferenceRunIndex !== index) {
+      diffBox.textContent = "실행을 선택하고 추정 단계에서 계산을 제출하면 비교 내용을 확인할 수 있습니다.";
+      return;
+    }
     const predOk =
       state.parentalGuess.length === 2 && run
         ? gradeParentalSelection(run.phase, state.parentalGuess)
@@ -201,7 +237,7 @@ function initReview(): void {
   setInterval(renderDiff, 2000);
 
   el("saveBtn").addEventListener("click", () => {
-    const run = state.runs[state.runs.length - 1];
+    const run = state.selectedRun === null ? undefined : state.runs[state.selectedRun];
     const msg = el("saveResult");
     if (!run) {
       msg.textContent = "저장할 실행이 없음.";

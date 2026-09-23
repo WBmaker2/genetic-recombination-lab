@@ -39,7 +39,7 @@ export function initP1(): void {
       `<tbody>${rows}</tbody></table>`;
     const line = (label: string, rHat: number | null, ci: [number, number] | null, rTrue: number): string => {
       if (rHat === null || ci === null) return `${label}: 추정 불가(N=0).`;
-      return `${label}: r_hat=${rHat.toFixed(3)} (95% 구간 ${ci[0].toFixed(3)}〜${ci[1].toFixed(3)}), 참 r=${rTrue}, 지도거리 ${fmtCM(rTrue)}.`;
+      return `${label}: 표본 추정 r̂=${rHat.toFixed(3)} (Wilson 95% 구간 ${ci[0].toFixed(3)}〜${ci[1].toFixed(3)}), 설정 r=${rTrue}, 지도거리 ${fmtCM(rTrue)} (설정 r 기준).`;
     };
     el("p1Result").innerHTML =
       `<p>${line("A–B 구간", est.r1.rHat, est.r1.ci95, s.r1)}</p>` +
